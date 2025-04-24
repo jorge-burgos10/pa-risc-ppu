@@ -2,6 +2,7 @@ module Fase3_TB;
     reg Clk = 0, Reset = 1, E = 1, S = 0;
     reg [7:0] front = 0, back = 4; reg [8*8:1] keyword;
     wire [31:0] IF_I;
+    wire [7:0] ID_front;
     wire [1:0] ID_RD_S;
     wire ID_Branch_C;
     wire [2:0] ID_SOH_OP;
@@ -30,8 +31,8 @@ module Fase3_TB;
      // Memoria de instrucciones
     InstructionMemory IM(front, IF_I);
 
-    //IF/ID Control Register
-    IF_ID_Control IF_ID(Clk, Reset, E, IF_I, ID_I);
+    //IF_ID Register
+    IF_ID_Register IF_ID(Clk, Reset, E, IF_I, front, ID_I, ID_front);
 
     // Unidad de control
     ControlUnit CU(ID_I, ID_RD_S, ID_Branch_C, ID_SOH_OP, ID_ALU_OP, ID_PSW_E,
@@ -126,15 +127,17 @@ module InstructionMemory(input [7:0] A, output reg [31:0] I);
 endmodule
 
 // [ IF/ID Register ]
-module IF_ID_Control (
+module IF_ID_Register (
     input Clk, input Reset, input E,
-    input [31:0] IF_I,
-    output reg [31:0] ID_I);
+    input [31:0] IF_I, input [7:0] IF_PC,
+    output reg [31:0] ID_I, output reg [7:0] ID_PC);
     always @(posedge Clk) begin
         if (Reset) begin
             ID_I <= 0;
+            ID_PC <=0;
         end else if (E) begin
             ID_I <= IF_I;
+            ID_PC <= IF_PC;
         end
     end
 endmodule
