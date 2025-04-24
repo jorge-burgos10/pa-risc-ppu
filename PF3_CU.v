@@ -30,8 +30,8 @@ module Fase3_TB;
      // Memoria de instrucciones
     InstructionMemory IM(front, IF_I);
 
-    //IF/ID Register
-    IF_ID_Register IF_ID(Clk, Reset, E, IF_I, ID_I);
+    //IF/ID Control Register
+    IF_ID_Control IF_ID(Clk, Reset, E, IF_I, ID_I);
 
     // Unidad de control
     ControlUnit CU(ID_I, ID_RD_S, ID_Branch_C, ID_SOH_OP, ID_ALU_OP, ID_PSW_E,
@@ -43,18 +43,18 @@ module Fase3_TB;
     ID_RF_LE, ID_Shift_E, MUX_RD_S, MUX_Branch_C, MUX_SOH_OP, MUX_ALU_OP, MUX_PSW_E,
     MUX_ALU_Size, MUX_ALU_RW, MUX_ALU_E, MUX_Branch_U, MUX_LOAD_E, MUX_RF_LE, MUX_Shift_E);
 
-    //ID_EX Register
-    ID_EX_Register ID_EX(Clk, Reset, MUX_Branch_C, MUX_SOH_OP, MUX_ALU_OP, MUX_PSW_E,
+    //ID_EX Control Register
+    ID_EX_Control ID_EX(Clk, Reset, MUX_Branch_C, MUX_SOH_OP, MUX_ALU_OP, MUX_PSW_E,
     MUX_ALU_Size, MUX_ALU_RW, MUX_ALU_E, MUX_Branch_U, MUX_LOAD_E, MUX_RF_LE, MUX_Shift_E, EX_Branch_C,
     EX_SOH_OP, EX_ALU_OP, EX_PSW_E, EX_ALU_Size,EX_ALU_RW, EX_ALU_E, EX_Branch_U,
     EX_LOAD_E, EX_RF_LE, EX_Shift_E);
 
-    //EX_MEM Register
-    EX_MEM_Register EX_MEM(Clk, Reset, EX_ALU_Size, EX_ALU_RW, EX_ALU_E, EX_Branch_U, EX_LOAD_E,
+    //EX_MEM Control Register
+    EX_MEM_Control EX_MEM(Clk, Reset, EX_ALU_Size, EX_ALU_RW, EX_ALU_E, EX_Branch_U, EX_LOAD_E,
     EX_RF_LE, MEM_ALU_Size, MEM_ALU_RW, MEM_ALU_E, MEM_Branch_U, MEM_LOAD_E, MEM_RF_LE);
 
-    //MEM/WB Register
-    MEM_WB_Register MEM_WB(Clk, Reset, MEM_RF_LE, WB_RF_LE);
+    //MEM/WB Control Register
+    MEM_WB_Control MEM_WB(Clk, Reset, MEM_RF_LE, WB_RF_LE);
 
 
     // Reloj
@@ -126,7 +126,7 @@ module InstructionMemory(input [7:0] A, output reg [31:0] I);
 endmodule
 
 // [ IF/ID Register ]
-module IF_ID_Register (
+module IF_ID_Control (
     input Clk, input Reset, input E,
     input [31:0] IF_I,
     output reg [31:0] ID_I);
@@ -240,7 +240,7 @@ module Mux_2_11 (input S,
 endmodule
 
 // [ ID/EX Register ]
-module ID_EX_Register ( 
+module ID_EX_Control ( 
     input Clk, input Reset, input MUX_Branch_C,
     input [2:0] MUX_SOH_OP, input [3:0] MUX_ALU_OP,
     input MUX_PSW_E, input [1:0] MUX_ALU_Size,
@@ -266,7 +266,7 @@ module ID_EX_Register (
 endmodule
 
 // [ EX/MEM Register ]
-module EX_MEM_Register (
+module EX_MEM_Control (
     input Clk, input Reset, input [1:0] EX_ALU_Size,
     input EX_ALU_RW, EX_ALU_E, input EX_Branch_U, EX_LOAD_E, EX_RF_LE, output reg [1:0] MEM_ALU_Size,
     output reg MEM_ALU_RW, MEM_ALU_E,
@@ -283,7 +283,7 @@ module EX_MEM_Register (
 endmodule
 
 // [ MEM/WB Register ]
-module MEM_WB_Register (
+module MEM_WB_Control (
     input Clk, input Reset, input MEM_RF_LE, output reg WB_RF_LE);
     always @(posedge Clk) begin
         if (Reset) begin
