@@ -76,3 +76,7 @@ module Hazard_Detection (input [4:0] ID_RA, ID_RB, ID_RD, EX_RD, MEM_RD, WB_RD, 
 input EX_Load_E, EX_RF_LE, MEM_RF_LE, WB_RF_LE, output reg [1:0] A_S, B_S, output reg NOP, LE);
 
 endmodule
+
+module Target_Address_Generator (input B, input [7:0] Offset, FT, Target_Address);
+
+endmodule
