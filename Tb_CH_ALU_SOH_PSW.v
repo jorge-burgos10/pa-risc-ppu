@@ -1,0 +1,383 @@
+﻿//////////////////////////// ALU module//////////////////////////////
+
+
+module ALU(
+    input [31:0] A, B,
+    input Ci,
+    input [3:0] OP,
+    output reg [31:0] Out,
+    output reg Z, N, C, V
+);
+
+
+always @(*) begin
+    case(OP)
+        4'b0000: {C, Out} = A + B;      // A + B
+        4'b0001: {C, Out} = A + B + Ci; // A + B + Ci
+        4'b0010: {C, Out} = {1'b0, A} - {1'b0, B};      // A - B
+        4'b0011: {C, Out} = {1'b0, A} - {1'b0, B} - Ci; // A - B - Ci
+        4'b0100: {C, Out} = {1'b0, B} - {1'b0, A};      // B - A
+        4'b0101: Out = A | B;           // A OR B
+        4'b0110: Out = A ^ B;           // A XOR B
+        4'b0111: Out = A & B;           // A AND B
+        4'b1010: Out = A;               // A
+        4'b1011: Out = A + 8;           // A + 8
+        4'b1100: Out = B;               // B
+        default: Out = 32'b0;           // Not used cases
+    endcase
+   
+    // Flags
+    Z = (Out == 32'b0) ? 1 : 0;
+    N = Out[31];
+    V = ((OP == 4'b0000 || OP == 4'b0001) && (~(A[31] ^ B[31]) & (A[31] ^ Out[31]))) |
+        ((OP == 4'b0010 || OP == 4'b0011) && ((A[31] ^ B[31]) & (A[31] ^ Out[31])));
+end
+
+
+endmodule
+
+
+/////////////////////////////////////////////////////////////////////
+//////////////////////////// SOH module//////////////////////////////
+/////////////////////////////////////////////////////////////////////
+
+
+module operandhandler ( output reg [31:0] N,  input [31:0] RB,   input [20:0] I,  input [2:0] S);
+
+
+
+
+always @(*) begin
+    case (S)
+        3'b000: N = RB;
+        3'b001: N = {{21{I[10]}}, I[10:0]};
+        3'b010: N = {{18{I[13]}}, I[13:0]};
+        3'b011: N = {I, 11'b0};
+        3'b100: N = RB >> (31 - I[9:5]);
+        3'b101: N = $signed(RB) >>> (31 - I[9:5]);  
+        3'b110: N = RB << (31 - I[9:5]);  
+        default: N = 32'b0;
+    endcase
+end
+
+
+endmodule
+
+
+/////////////////////////////////////////////////////////////////////
+//////////////////////////// PSW module//////////////////////////////
+/////////////////////////////////////////////////////////////////////
+
+
+module PSW (
+    input wire E,          
+    input wire CC,        
+    output reg cb        
+);
+
+
+    always @ (E or CC) begin
+        if (E)
+            cb = CC;
+        else
+            cb = 1'b0;
+    end
+
+
+endmodule
+
+
+/////////////////////////////////////////////////////////////////////
+//////////////////// Condition Handler module////////////////////////
+/////////////////////////////////////////////////////////////////////
+
+
+module CH (
+    input wire N, Z, V, C,        // Flags: Negative, Zero, Overflow, Carry
+    input wire [2:0] Cond,        // Condition code
+    input wire B,                 // Enable
+    output reg J                  // Jump condition result
+);
+
+
+always @(*) begin
+    if (B) begin
+        case (Cond)
+            3'b000: J = 1'b0;               // Never
+            3'b001: J = Z;                 // Equal (Z set)
+            3'b010: J = N ^ V;            // Less than (signed)
+            3'b011: J = Z | (N ^ V);     // Less or equal (signed)
+            3'b100: J = ~C;      // Less than (unsigned) → no carry = less
+            3'b101: J = Z | ~C;        // Less or equal (unsigned)
+            3'b110: J = V;            // Overflow occurred
+            3'b111: J = ~Z & ~V & ~N;// "Odd" (placeholder logic)
+            default: J = 1'b0;
+        endcase
+    end else begin
+        J = 1'b0;
+    end
+end
+
+
+endmodule
+
+
+/////////////////////////////////////////////////////////////////////
+//////////////////////////// top module//////////////////////////////
+/////////////////////////////////////////////////////////////////////
+
+
+
+
+module top_module (
+    input wire [31:0] A,         // ALU input A
+    input wire [31:0] RB,        // Register input for operandhandler
+    input wire [20:0] I,         // Immediate input for operandhandler
+    input wire [2:0] S,          // Operand selector for operandhandler
+    input wire E,                // Enable signal for PSW
+    input wire B,                // Enable for condition handler
+    input wire [2:0] Cond,       // Condition code input
+    input wire [3:0] OP,         // ALU operation code
+    output wire [31:0] Out,      // ALU result
+    output wire J                // Jump condition output
+);
+
+
+    // Internal wires
+    wire [31:0] alu_B;           // From operand handler to ALU B input
+    wire cb_to_alu;              // From PSW to ALU Ci input
+    wire Z, N, C, V;             // Flags from ALU
+
+
+    // Instantiate operandhandler (SOH)
+    operandhandler u_operandhandler (
+        .N(alu_B),
+        .RB(RB),
+        .I(I),
+        .S(S)
+    );
+
+
+    // Instantiate PSW
+    PSW u_PSW (
+        .E(E),
+        .CC(C),        
+        .cb(cb_to_alu)
+    );
+
+
+    // Instantiate ALU
+    ALU u_ALU (
+        .A(A),
+        .B(alu_B),
+        .Ci(cb_to_alu),
+        .OP(OP),
+        .Out(Out),
+        .Z(Z),
+        .N(N),
+        .C(C),
+        .V(V)
+    );
+
+
+    // Instantiate Condition Handler
+    CH u_CH (
+        .N(N),
+        .Z(Z),
+        .V(V),
+        .C(C),
+        .Cond(Cond),
+        .B(B),
+        .J(J)
+    );
+
+
+endmodule
+
+
+
+
+/////////////////////////////////////////////////////////////////////
+//////////////////////////// Testbench module////////////////////////
+/////////////////////////////////////////////////////////////////////
+
+
+
+
+module tb_top_module;
+
+
+    // Inputs
+    reg [31:0] A;
+    reg [31:0] RB;
+    reg [20:0] I;
+    reg [2:0] S;
+    reg E;
+    reg B;
+    reg [2:0] Cond;
+    reg [3:0] OP;
+
+
+    // Outputs
+    wire [31:0] Out;
+    wire J;
+
+
+    // Instantiate the top module
+    top_module uut (
+        .A(A),
+        .RB(RB),
+        .I(I),
+        .S(S),
+        .E(E),
+        .B(B),
+        .Cond(Cond),
+        .OP(OP),
+        .Out(Out),
+        .J(J)
+    );
+
+
+    //  task to print binary-formatted results
+    task print_result;
+        begin
+            $display("A=%b=%d", A,A);
+           
+            $display("RB=%b=%d", RB,RB);
+           
+            $display("I=%b=%d", I,I);
+           
+            $display("S=%b | OP=%b | E=%b | B=%b | Cond=%b", S, OP, E, B, Cond);
+           
+            $display("Out=%b=%d", Out, Out);
+            $display("Flags => Z=%b N=%b C=%b V=%b", uut.u_ALU.Z, uut.u_ALU.N, uut.u_ALU.C, uut.u_ALU.V);
+            $display("J=%b", J);
+            $display("");
+            $display("");
+        end
+    endtask
+
+
+    // Test sequence
+    initial begin
+     
+
+
+        // ---- Test 1: Simple ADD ----
+        $display("---- Test 1: A + B ----");
+        A = 32'b00000000000000000000000000001010; // 10
+        RB = 32'b00000000000000000000000000010100; // 20
+        I = 21'b000000000000000000000;
+        S = 3'b000;
+        E = 1;
+        B = 1;
+        Cond = 3'b001;
+        OP = 4'b0000;
+        #10;
+        print_result();
+
+
+        // ---- Test 2: Use Immediate ----
+        $display("---- Test 2: A + immediate ----");
+        A = 32'b00000000000000000000000000001010; // 10
+        RB = 32'b00000000000000000000000000001010; //10
+        I = 21'b000000000000000000111; // 7
+        S = 3'b001;
+        OP = 4'b0000;
+        #10;
+        print_result();
+
+
+        // ---- Test 3: A - B ----
+        $display("---- Test 3: A - B ----");
+        A = 32'b00000000000000000000000000011110; // 30
+        RB = 32'b00000000000000000000000000001111; // 15
+        S = 3'b000;
+        OP = 4'b0010;
+        #10;
+        print_result();
+
+
+        // ---- Test 4: A AND B ----
+        $display("---- Test 4: A AND B ----");
+        A = 32'b00000000000000000000000000001100; // 12
+        RB = 32'b00000000000000000000000000001010; // 10
+        OP = 4'b0111;
+        #10;
+        print_result();
+
+
+        // ---- Test 5: Overflow ADD and CH enabled ----
+        $display("---- Test 5: Overflow ADD ----");
+        A = 32'b01111111111111111111111111111111; // 2147483647
+        RB = 32'b00000000000000000000000000000001;
+        B = 1;
+        Cond = 3'b110;
+        S = 3'b000;
+        OP = 4'b0000;
+        #10;
+        print_result();
+
+
+        // ---- Test 6: PSW disabled ----
+        $display("---- Test 6: PSW disabled ----");
+        E = 0;
+        A = 32'b00000000000000000000000000000101;
+        RB = 32'b00000000000000000000000000000101;
+        OP = 4'b0001; // ADD with carry-in
+        #10;
+        print_result();
+
+
+        // ---- Test 7: CH disabled ----
+        $display("--- Test 7: CH disabled --");
+        B = 0;
+        A = 32'b00000000000000000000000000000101;
+        RB = 32'b00000000000000000000000000000101;
+        OP = 4'b0000;
+        #10;
+        print_result();
+       
+         // ---- Test 8: CH disabled ----
+        $display("--- Test 8: CH enable -");
+        B = 1;
+        E = 0;
+        A = 32'b00000000000000000000000000000101;
+        RB = 32'b00000000000000000000000000000101;
+        OP = 4'b0010; // ADD with carry-in
+        Cond = 3'b001;
+        #10;
+        print_result();
+       
+       
+        // ---- Test 9: Carry flag test ----
+        $display("-- Test 9: A + B for Carry Flag");
+        A = 32'b11111111111111111111111111111010;
+        RB = 32'b00000000000000000000000000010100;
+        I = 21'b000000000000000000000;
+        S = 3'b000;
+        E = 0;
+        B = 1;
+        Cond = 3'b001;
+        OP = 4'b0000;
+        #10;
+        print_result();
+       
+       
+       
+        // ---- Test 10: PSW enabled ----
+        $display("-- Test 10: PSW enabled -");
+        E = 1;
+        A = 32'b00000000000000000000000000000110;
+        RB = 32'b00000000000000000000000000000000;
+        OP = 4'b0011; // ADD with carry-in
+        #10;
+        print_result();
+
+
+        $display("=== Simulation End ===");
+        $finish;
+    end
+
+
+endmodule
