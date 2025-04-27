@@ -115,6 +115,7 @@ Register_file RF (Clk, WB_RF_LE , ID_I [25:21], ID_I [20:16], RW, WB_PW, PA, PB)
 Mux_4 PA_M (ID_PA, A_S, PA, EX_Data_Address, MEM_PW, WB_PW);
 Mux_4 PB_M (ID_PB, B_S, PB, EX_Data_Address, MEM_PW, WB_PW);
 ADD #(.add(8)) ID (ID_PC, ID_NEW_PC);
+Target_Address_Generator TAG (ID_Branch_C, ID_I [20:0], ID_NEW_PC, ID_Target);
 
 //Control System Begin
 ControlUnit CU (ID_I, ID_RD_S, ID_Branch_C, ID_SOH_OP, ID_ALU_OP, ID_PSW_E,
