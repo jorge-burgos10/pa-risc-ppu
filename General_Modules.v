@@ -1,4 +1,4 @@
-module PC_Reg (input Clk, LE, input [7:0] PC_in, output reg [7:0] PC_out);
+module PC_Reg #(parameter PC_Set = 0) (input Clk, LE, input [7:0] PC_in, output reg [7:0] PC_out);
     always @ (posedge Clk)
     if(LE) 
     begin
@@ -57,15 +57,22 @@ MEM_Data_Address, output reg [4:0] MEM_RD);
     end
 endmodule
 
-module MEM_WB_Register (input Clk, Reset, input [7:0] MEM_PW, input [4:0] MEM_RD,
-output reg [7:0] WB_PW, output reg [4:0] WB_RD);
+module MEM_WB_Register (input Clk, Reset, MEM_RF_LE, input [31:0] MEM_PW, input [4:0] MEM_RD,
+output reg WB_RF_LE, output reg [31:0] WB_PW, output reg [4:0] WB_RD);
     always @ (posedge Clk)
     if(!Reset) begin
         WB_PW <= MEM_PW;
         WB_RD <= MEM_RD;
+        WB_RF_LE <= MEM_RF_LE;
     end
     else begin
         WB_PW <= 0;
         WB_RD <= 0;
+        WB_RF_LE <= 0;
     end
+endmodule
+
+module Hazard_Detection (input [4:0] ID_RA, ID_RB, ID_RD, EX_RD, MEM_RD, WB_RD, input [1:0] ID_SR,
+input EX_Load_E, EX_RF_LE, MEM_RF_LE, WB_RF_LE, output reg [1:0] A_S, B_S, output reg NOP, LE);
+
 endmodule
