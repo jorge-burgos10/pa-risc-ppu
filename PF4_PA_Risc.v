@@ -20,13 +20,13 @@ wire [7:0] ID_PC;
 // ID Stage
 wire [4:0] ID_RD;
 wire [4:0] RW;
-wire [7:0] ID_PA, ID_PB;
+wire [31:0] ID_PA, ID_PB;
 wire [31:0] PA; 
 wire [31:0] PB;
-wire [7:0] EX_Data_Address;
+wire [31:0] EX_Data_Address;
 wire [31:0] MEM_PW;
 wire [31:0] WB_PW;
-wire [7:0] ID_NEW_PC;
+wire [7:0] ID_NEW_PC, ID_Target;
 
 // Control Unit outputs
 wire [1:0] ID_RD_S;
@@ -56,7 +56,7 @@ wire [1:0] A_S, B_S;
 wire NOP;
 
 // ID_EX Pipeline Register
-wire [7:0] EX_PA, EX_PB;
+wire [31:0] EX_PA, EX_PB;
 wire [20:0] EX_Immediate;
 wire [7:0] EX_NEW_PC;
 wire [7:0] EX_Target;
@@ -72,9 +72,9 @@ wire [1:0] EX_ALU_Size;
 wire EX_ALU_RW, EX_ALU_E, EX_Branch_U, EX_Shift_E;
 
 // EX Stage
-wire [7:0] SOH_In, SOH_Out;
-wire [7:0] C_B;
-wire [7:0] ALU_Out;
+wire [31:0] SOH_In, SOH_Out;
+wire C_B;
+wire [31:0] ALU_Out;
 wire Z, N, C, V;
 
 // PSW outputs
@@ -84,15 +84,16 @@ wire CC;
 wire J;
 
 // EX/MEM Register
-wire [7:0] MEM_PB, MEM_Data_Address;
+wire [31:0] MEM_PB;
+wire [7:0] MEM_Data_Address;
 wire [4:0] MEM_RD;
 
 // EX_MEM Control
-wire MEM_ALU_Size;
+wire [1:0] MEM_ALU_Size;
 wire MEM_ALU_RW, MEM_ALU_E, MEM_Branch_U, MEM_LOAD_E;
 
 // MEM Stage
-wire [7:0] MEM_DO;
+wire [31:0] MEM_DO;
 
 // MEM_WB Register
 wire [4:0] WB_RD;
@@ -100,7 +101,7 @@ wire [4:0] WB_RD;
 
 //IF Stage Begin
 PC_Reg #(.PC_Set(4)) Back (Clk, LE, back, back_out);
-Add IF (back_out, back);
+ADD IF (back_out, back);
 Mux_2 #(.W(8)) IF1 (IF_1, J, back_out, EX_Target);
 Mux_2 #(.W(8)) IF2 (front, ID_Branch_U, IF_1, EX_Target);
 PC_Reg Front (Clk, LE, front, IF_PC);
