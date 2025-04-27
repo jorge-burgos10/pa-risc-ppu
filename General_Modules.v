@@ -77,6 +77,17 @@ input EX_Load_E, EX_RF_LE, MEM_RF_LE, WB_RF_LE, output reg [1:0] A_S, B_S, outpu
 
 endmodule
 
-module Target_Address_Generator (input B, input [7:0] Offset, FT, Target_Address);
-
+module Target_Address_Generator (input B, input [20:0] Offset, input [7:0] FT, output reg [7:0] Target_Address); 
+    reg [15:0] W_SE;
+    reg [15:0] W;
+    always @ (*) begin
+    if (B) begin
+        W_SE = {{4{Offset[12]}}, Offset[12:2], Offset[0]}; // Sign extend
+    end
+    else begin
+        W_SE = {{4{Offset[20]}}, Offset[20:16], Offset[12:2], Offset[0]}; // Sign extend
+    end
+        W = W_SE << 2;
+        Target_Address = FT + W[7:0];
+    end
 endmodule
