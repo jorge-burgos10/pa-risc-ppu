@@ -1,8 +1,8 @@
 module Fase3_TB;
     reg Clk = 0, Reset = 1, E = 1, S = 0;
-    reg [7:0] front = 0, back = 4; reg [8*8:1] keyword;
+    reg [31:0] front = 0, back = 4; reg [8*8:1] keyword;
     wire [31:0] IF_I;
-    wire [7:0] ID_front;
+    wire [31:0] ID_front;
     wire [1:0] ID_RD_S;
     wire ID_Branch_C;
     wire [2:0] ID_SOH_OP;
@@ -29,7 +29,7 @@ module Fase3_TB;
     wire WB_RF_LE;
 
      // Memoria de instrucciones
-    InstructionMemory IM(front, IF_I);
+    InstructionMemory IM(front[7:0], IF_I);
 
     //IF_ID Register
     IF_ID_Register IF_ID(Clk, Reset, E, IF_I, front, ID_I, ID_front);
@@ -129,8 +129,8 @@ endmodule
 // [ IF/ID Register ]
 module IF_ID_Register (
     input Clk, input Reset, input E,
-    input [31:0] IF_I, input [7:0] IF_PC,
-    output reg [31:0] ID_I, output reg [7:0] ID_PC);
+    input [31:0] IF_I, input [31:0] IF_PC,
+    output reg [31:0] ID_I, output reg [31:0] ID_PC);
     always @(posedge Clk) begin
         if (Reset) begin
             ID_I <= 0;
