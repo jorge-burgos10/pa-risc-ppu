@@ -1,0 +1,112 @@
+﻿//////////TARGET ADDRESS GENERATOR////////////////
+//////////////////////////////////////////////////
+
+
+module TAG (
+    input wire [20:0] OFFSET, // 21-bit signed immediate (OFFSET)
+    input wire B, // Branch enable (1 = branch, 0 = no branch)
+    input wire [31:0] FT_plus_8, // Modified front PC (FT + 8)
+    output wire [31:0] Out // Target address (32 bits)
+);
+
+
+// Internal signal to hold the shifted immediate value
+wire [31:0] shifted_offset;
+
+
+// Shift the OFFSET left by 2 bits (for word alignment)
+assign shifted_offset = {OFFSET, 2'b00}; 
+
+
+// Calculate the target address if B = 1 (branch enabled), else output 0
+assign Out = (B) ? (FT_plus_8 + shifted_offset) : 32'b0;
+
+
+endmodule
+
+
+///////////////////////////////////////////
+//////////////////ADDER////////////////////
+///////////////////////////////////////////
+
+
+module PC_Adder (
+    input wire [19:0] FT_front, // Front 20 bits of the Program Counter (PC)
+    output wire [31:0] FT_plus_8 // PC with 8 added
+);
+
+
+// Add 8 to the front PC to simulate the adder
+assign FT_plus_8 = {FT_front, 12'b0} + 32'd8; // Add 8 to the front PC
+
+
+endmodule
+
+
+///////////////////////////////////////////////
+/////////////TEST BENCH////////////////////////
+///////////////////////////////////////////////
+
+
+module TB_TAG;
+
+
+// Testbench signals
+reg [20:0] OFFSET; // 21-bit signed immediate
+reg B; // Branch enable
+reg [19:0] FT_front; // 20-bit Front Program Counter (PC)
+wire [31:0] FT_plus_8; // Output from PC Adder (Front PC + 8)
+wire [31:0] Out; // Target address (32 bits)
+
+
+// Instantiate the PC Adder module
+PC_Adder pc_adder (
+    .FT_front(FT_front),
+    .FT_plus_8(FT_plus_8)
+);
+
+
+// Instantiate the TAG module
+TAG uut (
+    .OFFSET(OFFSET),
+    .B(B),
+    .FT_plus_8(FT_plus_8),
+    .Out(Out)
+);
+
+
+initial begin
+    // Test 1: Branch enabled (B = 1)
+    OFFSET = 21'b000000000000000000011; // 21-bit signed immediate OFFSET (binary)
+    B = 1; // Enable branch
+    FT_front = 20'b00000000000000000001; // Front PC value (binary)
+    #10; // Wait for 10 time units
+    $display("Test 1 - Branch enabled: FT_front = %b, OFFSET = %b, Out = %b", FT_front, OFFSET, Out);
+
+
+    // Test 2: No branch (B = 0)
+    OFFSET = 21'b000000000000000000011;
+    B = 0; // Disable branch
+    FT_front = 20'b00000000000000000001;
+    #10;
+    $display("Test 2 - No branch: FT_front = %b, OFFSET = %b, Out = %b", FT_front, OFFSET, Out);
+
+
+    // Test 3: Another branch with different offset
+    OFFSET = 21'b000000000000000000101; // 21-bit signed immediate OFFSET (binary)
+    B = 1;
+    FT_front = 20'b00000000000000000010; // Front PC value (binary)
+    #10;
+    $display("Test 3 - Branch enabled with different offset: FT_front = %b, OFFSET = %b, Out = %b", FT_front, OFFSET, Out);
+
+
+    // Test 4: Negative OFFSET (assuming signed)
+    OFFSET = 21'b111111111111111111110; // Negative offset (twos complement, binary)
+    B = 1;
+    FT_front = 20'b00000000000000000001;
+    #10;
+    $display("Test 4 - Negative offset: FT_front = %b, OFFSET = %b, Out = %b", FT_front, OFFSET, Out);
+end
+
+
+endmodule
