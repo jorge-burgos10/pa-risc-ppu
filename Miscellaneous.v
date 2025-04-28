@@ -28,7 +28,7 @@ module Mux_3 #(parameter W = 32) (output reg [W-1:0] o_mux, input [1:0] i_mux, i
     end
 endmodule
 
-module ADD #(parameter add = 4, W = 8) (input [W-1:0] add_in, output reg [W-1:0] add_out);
+module ADD #(parameter add = 4, W = 32) (input [W-1:0] add_in, output reg [W-1:0] add_out);
     always @ (*) begin
     add_out = add_in + add;
     end

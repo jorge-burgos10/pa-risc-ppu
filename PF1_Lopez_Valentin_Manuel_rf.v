@@ -39,7 +39,7 @@ module Register_file(input clk, E , input [4:0] RA, RB, RW, input [31:0] PW, out
   Regi_32 R3 (Q3, PW, O[3], clk);
   Regi_32 R4 (Q4, PW, O[4], clk);
   Regi_32 R5 (Q5, PW, O[5], clk);
-  Regi_32 R6 (Q5, PW, O[6], clk);
+  Regi_32 R6 (Q6, PW, O[6], clk);
   Regi_32 R7 (Q7, PW, O[7], clk);
   Regi_32 R8 (Q8, PW, O[8], clk);
   Regi_32 R9 (Q9, PW, O[9], clk);
