@@ -35,7 +35,7 @@ output reg [31:0] EX_front_add, EX_Target, output reg [4:0] EX_RD, output reg [2
     end
     else begin
         EX_PA <= 0;
-        EX_PA <= 0;
+        EX_PB <= 0;
         EX_Immediate <= 0;
         EX_front_add <= 0;
         EX_Target <= 0;
@@ -74,15 +74,9 @@ output reg WB_RF_LE, output reg [31:0] WB_PW, output reg [4:0] WB_RD);
     end
 endmodule
 
-module Hazard_Detection(
-    input [4:0] ID_RA, ID_RB, ID_RD, EX_RD, MEM_RD, WB_RD,
-    input [1:0] ID_SR,
-    input EX_Load_E, EX_RF_LE, MEM_RF_LE, WB_RF_LE,
-    output reg [1:0] A_S, B_S,
-    output reg NOP, LE
-);
-
-    always @(*) begin
+module Hazard_Detection (input [4:0] ID_RA, ID_RB, ID_RD, EX_RD, MEM_RD, WB_RD, input [1:0] ID_SR,
+input EX_Load_E, EX_RF_LE, MEM_RF_LE, WB_RF_LE, output reg [1:0] A_S, B_S, output reg NOP, LE);
+always @(*) begin
         // Inicializar por defecto (sin hazard, avanzar normal)
         A_S = 2'b00;
         B_S = 2'b00;
@@ -127,10 +121,10 @@ module Target_Address_Generator (input B, input [20:0] Offset, input [31:0] FT, 
     reg [31:0] W;
     always @ (*) begin
     if (B) begin
-        W_SE = {{19{Offset[12]}}, Offset[12:2], Offset[0]}; // Sign extend
+        W_SE = {{20{Offset[12]}}, Offset[12:2], Offset[0]}; // Sign extend
     end
     else begin
-        W_SE = {{11{Offset[20]}}, Offset[20:16], Offset[12:2], Offset[0]}; // Sign extend
+        W_SE = {{15{Offset[20]}}, Offset[20:16], Offset[12:2], Offset[0]}; // Sign extend
     end
         W = W_SE << 2;
         Target_Address = FT + W;
