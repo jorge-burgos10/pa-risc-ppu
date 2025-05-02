@@ -35,7 +35,7 @@ output reg [31:0] EX_front_add, EX_Target, output reg [4:0] EX_RD, output reg [2
     end
     else begin
         EX_PA <= 0;
-        EX_PA <= 0;
+        EX_PB <= 0;
         EX_Immediate <= 0;
         EX_front_add <= 0;
         EX_Target <= 0;
@@ -76,6 +76,42 @@ endmodule
 
 module Hazard_Detection (input [4:0] ID_RA, ID_RB, ID_RD, EX_RD, MEM_RD, WB_RD, input [1:0] ID_SR,
 input EX_Load_E, EX_RF_LE, MEM_RF_LE, WB_RF_LE, output reg [1:0] A_S, B_S, output reg NOP, LE);
+always @(*) begin
+        // Inicializar por defecto (sin hazard, avanzar normal)
+        A_S = 2'b00;
+        B_S = 2'b00;
+        NOP = 1'b0;
+        LE = 1'b1;
+
+        // --- Data Forwarding para RA ---
+        if (ID_SR[1]) begin // Si el primer operando existe
+            if (EX_RF_LE && (ID_RA == EX_RD))
+                A_S = 2'b01; // Forward desde EX
+            else if (MEM_RF_LE && (ID_RA == MEM_RD))
+                A_S = 2'b10; // Forward desde MEM
+            else if (WB_RF_LE && (ID_RA == WB_RD))
+                A_S = 2'b11; // Forward desde WB
+        end
+
+        // --- Data Forwarding para RB ---
+        if (ID_SR[0]) begin // Si el segundo operando existe
+            if (EX_RF_LE && (ID_RB == EX_RD))
+                B_S = 2'b01; // Forward desde EX
+            else if (MEM_RF_LE && (ID_RB == MEM_RD))
+                B_S = 2'b10; // Forward desde MEM
+            else if (WB_RF_LE && (ID_RB == WB_RD))
+                B_S = 2'b11; // Forward desde WB
+        end
+
+        // --- Data Forwarding Hazard (LOAD) ---
+        if (EX_Load_E && (
+            (ID_SR[1] && (ID_RA == EX_RD)) ||
+            (ID_SR[0] && (ID_RB == EX_RD))
+        )) begin
+            LE = 1'b0;   // Congela PC y IF/ID
+            NOP = 1'b1;  // Coloca un NOP en EX
+        end
+    end
 
 endmodule
 
@@ -84,10 +120,10 @@ module Target_Address_Generator (input B, input [20:0] Offset, input [31:0] FT, 
     reg [31:0] W;
     always @ (*) begin
     if (B) begin
-        W_SE = {{19{Offset[12]}}, Offset[12:2], Offset[0]}; // Sign extend
+        W_SE = {{20{Offset[12]}}, Offset[12:2], Offset[0]}; // Sign extend
     end
     else begin
-        W_SE = {{11{Offset[20]}}, Offset[20:16], Offset[12:2], Offset[0]}; // Sign extend
+        W_SE = {{15{Offset[20]}}, Offset[20:16], Offset[12:2], Offset[0]}; // Sign extend
     end
         W = W_SE << 2;
         Target_Address = FT + W;
