@@ -1,8 +1,10 @@
 module PPU_Test_Bench;
     reg Clk = 0, Reset = 1;
     reg [8*8:1] keyword;
+    wire [3:0] R;
 
     PPU PPU_TB(Clk, Reset);
+    PC_track tracker (Clk, PPU_TB.IF_PC, R);
 
     always #2 Clk = ~Clk;
 
@@ -64,10 +66,10 @@ module PPU_Test_Bench;
 //Monitor Begin
 always @ (posedge Clk) begin
     $display("Time = %0t\t Front = %0d\n\tGR\t\t |\t GR1 = %0d\t GR2 = %0d\t GR3 = %0d\t GR5 = %0d\t GR6 = %0d\t GR10 = %0d\t GR11 = %0d\t GR12 = %0d\t GR14 = %0d\n",
-    $time, PPU_TB.ID_PC, PPU_TB.RF.Q1, PPU_TB.RF.Q2, PPU_TB.RF.Q3, PPU_TB.RF.Q5, PPU_TB.RF.Q6, PPU_TB.RF.Q10, PPU_TB.RF.Q11, PPU_TB.RF.Q12, PPU_TB.RF.Q14); 
+    $time, PPU_TB.IF_PC, PPU_TB.RF.Q1, PPU_TB.RF.Q2, PPU_TB.RF.Q3, PPU_TB.RF.Q5, PPU_TB.RF.Q6, PPU_TB.RF.Q10, PPU_TB.RF.Q11, PPU_TB.RF.Q12, PPU_TB.RF.Q14); 
     
     $display ("\tIF\t\t |\t Front = %0d\t Back = %0d\t MUX_1 = %0d\t MUX_2 = %0d Adder = %0d",
-    PPU_TB.IF_PC, PPU_TB.back_out, PPU_TB.IF_1, PPU_TB.front, PPU_TB.back); 
+    PPU_TB.IF_PC, PPU_TB.front, PPU_TB.IF_1, PPU_TB.back_out, PPU_TB.back); 
 
     $display("Control IF\t | \tLE=%b\n",
     PPU_TB.LE);
@@ -84,8 +86,11 @@ always @ (posedge Clk) begin
     PPU_TB.MUX_ALU_OP, PPU_TB.MUX_SOH_OP, PPU_TB.MUX_PSW_E, PPU_TB.MUX_Branch_U, PPU_TB.MUX_Branch_C, PPU_TB.MUX_ALU_Size, PPU_TB.MUX_ALU_RW,
     PPU_TB.MUX_LOAD_E, PPU_TB.MUX_ALU_E, PPU_TB.MUX_RF_LE, PPU_TB.MUX_RD_S, PPU_TB.MUX_Shift_E, PPU_TB.A_S, PPU_TB.B_S);
 
-    $display ("\tEX\t\t |\t NEW_PC = %0d\t Target = %0d\t Cond = %0d\t PA = %0d\t PB = %0d\t Immediate = %0d\t RD = %0d",
-    PPU_TB.EX_NEW_PC, PPU_TB.EX_Target, PPU_TB.EX_Cond, PPU_TB.EX_PA, PPU_TB.EX_PB, PPU_TB.EX_Immediate, PPU_TB.EX_RD); 
+    $display ("\tEX\t\t |\t NEW_PC = %0d\t Target = %0d\t Cond = %0d\t PA = %0d\t PB = %0d\t Immediate = %b\t RD = %0d\t SOH Out = %0d",
+    PPU_TB.EX_NEW_PC, PPU_TB.EX_Target, PPU_TB.EX_Cond, PPU_TB.EX_PA, PPU_TB.EX_PB, PPU_TB.EX_Immediate, PPU_TB.EX_RD, PPU_TB.SOH_Out); 
+
+    $display ("\tCOND\t |\t Condition = %b\t Branch True = %b\t Branch False = %b\t N = %b\t Z = %0b\t C = %b\t V = %b\t J = %b",
+    PPU_TB.ch.Cond, PPU_TB.ch.B[1], PPU_TB.ch.B[0], PPU_TB.ch.N, PPU_TB.ch.Z, PPU_TB.ch.C, PPU_TB.ch.V, PPU_TB.ch.J);
 
     $display("Control EX\t | \tALU_OP=%b SOH_OP=%b PSW_E=%b B_U=%b B_C=%b MEM_Size=%b MEM_RW=%b MEM_E=%b MUX_E=%b RF_LE=%b Shift_E=%b\n",
     PPU_TB.EX_ALU_OP, PPU_TB.EX_SOH_OP, PPU_TB.EX_PSW_E, PPU_TB.EX_Branch_U, PPU_TB.EX_Branch_C, PPU_TB.EX_ALU_Size, PPU_TB.EX_ALU_RW, PPU_TB.EX_LOAD_E,
@@ -110,10 +115,13 @@ always @ (posedge Clk) begin
 end
 //Monitors End
 
-    initial begin
-        #100 $finish;
+        always @ (posedge Clk)
+        if (R == 4) begin
+            $display("Simulation Finished");
+            $display("\n\n***************************************\n\n");
+            $finish;
+        end
 
-    end
 endmodule
 
 module PC_Reg #(parameter PC_Set = 0) (input Clk, LE, input [31:0] PC_in, output reg [31:0] PC_out);
@@ -124,6 +132,20 @@ module PC_Reg #(parameter PC_Set = 0) (input Clk, LE, input [31:0] PC_in, output
     if(LE) 
     begin
         PC_out <= PC_in;
+    end
+endmodule
+
+module PC_track (input Clk, input [31:0] PC, output reg [3:0] R);
+reg [31:0] PC_H;
+initial begin PC_H = 0;
+    R = 0;
+end 
+always @ (posedge Clk)
+    if (PC > PC_H) begin
+    PC_H <= PC; 
+    end
+else if (PC == PC_H) begin
+    R<= R+1;
     end
 endmodule
 
@@ -480,8 +502,8 @@ module operandhandler ( output reg [31:0] N,  input [31:0] RB,   input [20:0] I,
 always @(*) begin
     case (S)
         3'b000: N = RB;
-        3'b001: N = {{21{I[10]}}, I[10:0]};
-        3'b010: N = {{18{I[13]}}, I[13:0]};
+        3'b001: N = {{21{I[0]}}, I[10:1]};
+        3'b010: N = {{18{I[0]}}, I[13:1]};
         3'b011: N = {I, 11'b0};
         3'b100: N = RB >> (31 - I[9:5]);
         3'b101: N = $signed(RB) >>> (31 - I[9:5]);  
@@ -503,7 +525,7 @@ always @(*) begin
         case (Cond)
             3'b000: J = 1'b0;                      // Never
             3'b001: J = Z;                         // Equal (Z set)
-            3'b010: J = N ^ V;                     // Less than (signed)
+            3'b010: J = N;                         // Less than (signed)
             3'b011: J = Z | (N ^ V);               // Less or equal (signed)
             3'b100: J = ~C;                        // Less than (unsigned) → no carry = less
             3'b101: J = Z | ~C;                    // Less or equal (unsigned)
@@ -515,7 +537,7 @@ always @(*) begin
         case (Cond)
             3'b000: F = 1'b0;                      // Never
             3'b001: F = Z;                         // Equal (Z set)
-            3'b010: F = N ^ V;                     // Less than (signed)
+            3'b010: F = N;                         // Less than (signed)
             3'b011: F = Z | (N ^ V);               // Less or equal (signed)
             3'b100: F = ~C;                        // Less than (unsigned) → no carry = less
             3'b101: F = Z | ~C;                    // Less or equal (unsigned)
@@ -535,7 +557,7 @@ module DataMemory (
     input wire [31:0] DI,    
     input wire [1:0] Size,   
     input wire RW,           
-    input wire E,            
+    input wire E,                                        
     output reg [31:0] DO     
 );
     
@@ -648,7 +670,7 @@ module ControlUnit(input [31:0] ID_I,
                 end
                 6'b101000: begin// ADDL
                     ID_RD_S = 2'b10; ID_Branch_C = 00; ID_SOH_OP = 3'b000;
-                    ID_ALU_OP = 4'b0010; ID_PSW_E = 0; ID_ALU_Size = 2'b00;
+                    ID_ALU_OP = 4'b0000; ID_PSW_E = 0; ID_ALU_Size = 2'b00;
                     ID_ALU_RW = 0; ID_ALU_E = 0; ID_Branch_U = 0;
                     ID_LOAD_E = 0; ID_RF_LE = 1; ID_Shift_E = 0; ID_SR = 2'b11;
                 end
@@ -738,14 +760,14 @@ module ControlUnit(input [31:0] ID_I,
                 ID_LOAD_E = 0; ID_RF_LE = 0; ID_Shift_E = 0; ID_SR = 2'b11;
             end  
             6'b100000: begin // COMBT (salto condicional)
-                ID_RD_S = 2'b01; ID_Branch_C = 2'b01; ID_SOH_OP = 3'b000;
+                ID_RD_S = 2'b01; ID_Branch_C = 2'b10; ID_SOH_OP = 3'b000;
                 ID_ALU_OP = 4'b0010; ID_PSW_E = 0; ID_ALU_Size = 2'b00;
                 ID_ALU_RW = 0; ID_ALU_E = 0; ID_Branch_U = 0;
                 ID_LOAD_E = 0; ID_RF_LE = 0; ID_Shift_E = 0; ID_SR = 2'b11;
             end
             6'b100010: begin // COMBF
-                ID_RD_S = 2'b01; ID_Branch_C = 2'b10; ID_SOH_OP = 3'b010;
-                ID_ALU_OP = 4'b0000; ID_PSW_E = 0; ID_ALU_Size = 2'b00;
+                ID_RD_S = 2'b01; ID_Branch_C = 2'b01; ID_SOH_OP = 3'b000;
+                ID_ALU_OP = 4'b0010; ID_PSW_E = 0; ID_ALU_Size = 2'b00;
                 ID_ALU_RW = 0; ID_ALU_E = 0; ID_Branch_U = 0;
                 ID_LOAD_E = 0; ID_RF_LE = 1; ID_Shift_E = 0; ID_SR = 2'b11;
             end  
@@ -980,7 +1002,7 @@ wire [4:0] WB_RD;
 
 //IF Stage Begin
 PC_Reg #(.PC_Set(4)) Back (Clk, LE, back, back_out);
-ADD IF (back_out, back);
+ADD IF (front, back);
 Mux_2 IF1 (IF_1, J, back_out, EX_Target);
 Mux_2 IF2 (front, EX_Branch_U, IF_1, EX_Target);
 PC_Reg Front (Clk, LE, front, IF_PC);
@@ -1011,7 +1033,7 @@ EX_RF_LE, MEM_RF_LE, WB_RF_LE, A_S, B_S, NOP, LE);
 //ID Stage End
 
 ID_EX_Register ID_EX (Clk, Reset, ID_PA, ID_PB, ID_I [20:0], ID_NEW_PC, ID_Target,
-ID_RD, ID_I [17:15], EX_PA, EX_PB, EX_Immediate, EX_NEW_PC, EX_Target, EX_RD, EX_Cond);
+ID_RD, ID_I [15:13], EX_PA, EX_PB, EX_Immediate, EX_NEW_PC, EX_Target, EX_RD, EX_Cond);
 ID_EX_Control ID_EX_C (Clk, Reset, MUX_Branch_C, MUX_SOH_OP, MUX_ALU_OP, MUX_PSW_E,
 MUX_ALU_Size, MUX_ALU_RW, MUX_ALU_E, MUX_Branch_U, MUX_LOAD_E, MUX_RF_LE, MUX_Shift_E, EX_Branch_C,
 EX_SOH_OP, EX_ALU_OP, EX_PSW_E, EX_ALU_Size,EX_ALU_RW, EX_ALU_E, EX_Branch_U,
