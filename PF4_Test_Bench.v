@@ -63,8 +63,8 @@ module PPU_Test_Bench;
 
 //Monitor Begin
 always @ (posedge Clk) begin
-    $display("Time = %0t\t Front = %0d\n\tGR\t\t |\t GR1 = %0d\t GR2 = %0d\t GR3 = %0d\t GR5 = %0d\t GR6 = %0d\t GR10 = %0d\t GR11 = %0d\t GR12 = %0d\t GR14 = %0d\n",
-    $time, PPU_TB.ID_PC, PPU_TB.RF.Q1, PPU_TB.RF.Q2, PPU_TB.RF.Q3, PPU_TB.RF.Q5, PPU_TB.RF.Q6, PPU_TB.RF.Q10, PPU_TB.RF.Q11, PPU_TB.RF.Q12, PPU_TB.RF.Q14); 
+    $display("Time = %0t\t Front = %0d Back = %0d\n\tGR\t\t |\t GR1 = %0d\t GR2 = %0d\t GR3 = %0d\t GR5 = %0d\t GR6 = %0d\t GR10 = %0d\t GR11 = %0d\t GR12 = %0d\t GR14 = %0d\n",
+    $time, PPU_TB.ID_PC, PPU_TB.back_out, PPU_TB.RF.Q1, PPU_TB.RF.Q2, PPU_TB.RF.Q3, PPU_TB.RF.Q5, PPU_TB.RF.Q6, PPU_TB.RF.Q10, PPU_TB.RF.Q11, PPU_TB.RF.Q12, PPU_TB.RF.Q14); 
     
     $display ("\tIF\t\t |\t Front = %0d\t Back = %0d\t MUX_1 = %0d\t MUX_2 = %0d Adder = %0d",
     PPU_TB.IF_PC, PPU_TB.back_out, PPU_TB.IF_1, PPU_TB.front, PPU_TB.back); 
@@ -105,16 +105,23 @@ always @ (posedge Clk) begin
 
     $display("Control WB\t | \tRF_LE=%b\n",
     PPU_TB.WB_RF_LE);
+    $display(" Data Memory Out = %b %b %b %b %b %b %b %b",PPU_TB.MEM_DO[31:28], PPU_TB.MEM_DO[27:24], PPU_TB.MEM_DO[23:20], PPU_TB.MEM_DO[19:16],PPU_TB.MEM_DO[15:12], PPU_TB.MEM_DO[11:8],  PPU_TB.MEM_DO[7:4],   PPU_TB.MEM_DO[3:0]);
 
     $display("\n\n***************************************\n\n");
 end
 //Monitors End
 
     initial begin
+        //#100
+        //$display(" Data Memory Out = %b %b %b %b %b %b %b %b",PPU_TB.MEM_DO[31:28], PPU_TB.MEM_DO[27:24], PPU_TB.MEM_DO[23:20], PPU_TB.MEM_DO[19:16],PPU_TB.MEM_DO[15:12], PPU_TB.MEM_DO[11:8],  PPU_TB.MEM_DO[7:4],   PPU_TB.MEM_DO[3:0]);
         #100 $finish;
+        
 
     end
+
+
 endmodule
+
 
 module PC_Reg #(parameter PC_Set = 0) (input Clk, LE, input [31:0] PC_in, output reg [31:0] PC_out);
     initial begin
@@ -480,8 +487,8 @@ module operandhandler ( output reg [31:0] N,  input [31:0] RB,   input [20:0] I,
 always @(*) begin
     case (S)
         3'b000: N = RB;
-        3'b001: N = {{21{I[10]}}, I[10:0]};
-        3'b010: N = {{18{I[13]}}, I[13:0]};
+        3'b001: N = {{21{I[0]}}, I[10:1]};
+        3'b010: N = {{18{I[0]}}, I[13:1]};
         3'b011: N = {I, 11'b0};
         3'b100: N = RB >> (31 - I[9:5]);
         3'b101: N = $signed(RB) >>> (31 - I[9:5]);  
@@ -503,7 +510,7 @@ always @(*) begin
         case (Cond)
             3'b000: J = 1'b0;                      // Never
             3'b001: J = Z;                         // Equal (Z set)
-            3'b010: J = N ^ V;                     // Less than (signed)
+            3'b010: J = N;                     // Less than (signed)
             3'b011: J = Z | (N ^ V);               // Less or equal (signed)
             3'b100: J = ~C;                        // Less than (unsigned) → no carry = less
             3'b101: J = Z | ~C;                    // Less or equal (unsigned)
@@ -515,7 +522,7 @@ always @(*) begin
         case (Cond)
             3'b000: F = 1'b0;                      // Never
             3'b001: F = Z;                         // Equal (Z set)
-            3'b010: F = N ^ V;                     // Less than (signed)
+            3'b010: F = N;                     // Less than (signed)
             3'b011: F = Z | (N ^ V);               // Less or equal (signed)
             3'b100: F = ~C;                        // Less than (unsigned) → no carry = less
             3'b101: F = Z | ~C;                    // Less or equal (unsigned)
@@ -527,10 +534,14 @@ always @(*) begin
     end else begin
         J = 1'b0;
     end
+    $display("*************Cond=%b, B=%b, N=%b, Z=%b, V=%b, C=%b", Cond, B, N, Z, V, C);
 end
+// display Cond, B, COND Flags
+
 endmodule
 
 module DataMemory (
+    input wire clk,
     input wire [7:0] A,      
     input wire [31:0] DI,    
     input wire [1:0] Size,   
@@ -558,23 +569,23 @@ module DataMemory (
         end
     end
     
-    always @(*) begin
+    always @(posedge clk) begin
         if (RW == 1 && E == 1) begin // Operación de escritura
             case (Size)
                 2'b00: begin
-                    mem[A] = DI[7:0]; 
+                    mem[A] <= DI[7:0]; 
           //          $display("WRITE - A: %0d, Data: %h, Size: %b, RW: %b, E: %b", A, DI[7:0], Size, RW, E);
                 end
                 2'b01: begin 
-                    mem[A] = DI[15:8];
-                    mem[A+1] = DI[7:0];
+                    mem[A] <= DI[15:8];
+                    mem[A+1] <= DI[7:0];
          //           $display("WRITE - A: %0d, Data: %h%h, Size: %b, RW: %b, E: %b", A, DI[15:8], DI[7:0], Size, RW, E);
                 end
                 2'b10: begin 
-                    mem[A] = DI[31:24];
-                    mem[A+1] = DI[23:16];
-                    mem[A+2] = DI[15:8];
-                    mem[A+3] = DI[7:0];
+                    mem[A] <= DI[31:24];
+                    mem[A+1] <= DI[23:16];
+                    mem[A+2] <= DI[15:8];
+                    mem[A+3] <= DI[7:0];
          //           $display("WRITE - A: %0d, Data: %h%h%h%h, Size: %b, RW: %b, E: %b", A, DI[31:24], DI[23:16], DI[15:8], DI[7:0], Size, RW, E);
                 end
             endcase
@@ -628,7 +639,7 @@ module ControlUnit(input [31:0] ID_I,
             end
             6'b100101: begin // SUBI
                 ID_RD_S = 2'b01; ID_Branch_C = 00; ID_SOH_OP = 3'b001;
-                ID_ALU_OP = 4'b0100; ID_PSW_E = 1; ID_ALU_Size = 2'b10;
+                ID_ALU_OP = 4'b0010; ID_PSW_E = 1; ID_ALU_Size = 2'b10;
                 ID_ALU_RW = 0; ID_ALU_E = 0; ID_Branch_U = 0;
                 ID_LOAD_E = 0; ID_RF_LE = 1; ID_Shift_E = 0; ID_SR = 2'b10;
             end
@@ -980,7 +991,7 @@ wire [4:0] WB_RD;
 
 //IF Stage Begin
 PC_Reg #(.PC_Set(4)) Back (Clk, LE, back, back_out);
-ADD IF (back_out, back);
+ADD IF (front, back);
 Mux_2 IF1 (IF_1, J, back_out, EX_Target);
 Mux_2 IF2 (front, EX_Branch_U, IF_1, EX_Target);
 PC_Reg Front (Clk, LE, front, IF_PC);
@@ -1031,7 +1042,7 @@ EX_MEM_Control EX_MEM_C (Clk, Reset, EX_ALU_Size, EX_ALU_RW, EX_ALU_E, EX_LOAD_E
 EX_RF_LE, MEM_ALU_Size, MEM_ALU_RW, MEM_ALU_E, MEM_LOAD_E, MEM_RF_LE);
 
 //MEM Stage Begin
-DataMemory DM (MEM_Data_Address [7:0], MEM_PB, MEM_ALU_Size, MEM_ALU_RW, MEM_ALU_E, MEM_DO);
+DataMemory DM (Clk, MEM_Data_Address [7:0], MEM_PB, MEM_ALU_Size, MEM_ALU_RW, MEM_ALU_E, MEM_DO);
 Mux_2 MEM1 (MEM_PW, MEM_LOAD_E, MEM_Data_Address, MEM_DO);
 //MEM Stage End
 
