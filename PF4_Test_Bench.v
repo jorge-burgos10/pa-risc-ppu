@@ -13,6 +13,7 @@ module PPU_Test_Bench;
     always #2 Clk = ~Clk;
 
     initial begin
+        $readmemb("SIM_Code/Validation_PA_risc.txt", original_mem);
         $display("\n\n***************************************\n\n");
         #3 Reset = 0;
     end
@@ -118,10 +119,10 @@ always @ (posedge Clk) begin
     $display("\n\n***************************************\n\n");
 end
 //Monitors End
-
+        
         always @ (posedge Clk)
         if (R == 4) begin
-                        $display("\n== Final Data Memory Contents ==\n");
+            $display("\n== Final Data Memory Contents ==\n");
             for (i = 0; i < 84; i = i + 4) begin
                 $display("%08b %08b %08b %08b", 
                         PPU_TB.DM.mem[i], 
@@ -130,7 +131,6 @@ end
                         PPU_TB.DM.mem[i+3]);
             end
             $display("\n== Cambios detectados en Data Memory ==\n");
-
 
             diff_file = $fopen("DM_changes.txt", "w");
 
@@ -150,11 +150,11 @@ end
             $fclose(diff_file);
             $display("\n***************************************\n");
             $display("Simulation Finished");
-            $display("\n\n***************************************\n\n");
             $finish;
         end
 
 endmodule
+
 
 module PC_Reg #(parameter PC_Set = 0) (input Clk, LE, input [31:0] PC_in, output reg [31:0] PC_out);
     initial begin
@@ -581,10 +581,14 @@ always @(*) begin
     end else begin
         J = 1'b0;
     end
+    $display("*************Cond=%b, B=%b, N=%b, Z=%b, V=%b, C=%b", Cond, B, N, Z, V, C);
 end
+// display Cond, B, COND Flags
+
 endmodule
 
 module DataMemory (
+    input wire clk,
     input wire [7:0] A,      
     input wire [31:0] DI,    
     input wire [1:0] Size,   
@@ -598,6 +602,7 @@ module DataMemory (
     initial begin
         $readmemb("SIM_Code/Validation_PA_risc.txt", mem); // Precarga de memoria desde archivo
       //  $display("Archivo cargado correctamente");
+
     end
     
     always @(*) begin
@@ -612,28 +617,29 @@ module DataMemory (
         end
     end
     
-    always @(*) begin
+    always @(posedge clk) begin
         if (RW == 1 && E == 1) begin // Operación de escritura
             case (Size)
                 2'b00: begin
-                    mem[A] = DI[7:0]; 
+                    mem[A] <= DI[7:0]; 
           //          $display("WRITE - A: %0d, Data: %h, Size: %b, RW: %b, E: %b", A, DI[7:0], Size, RW, E);
                 end
                 2'b01: begin 
-                    mem[A] = DI[15:8];
-                    mem[A+1] = DI[7:0];
+                    mem[A] <= DI[15:8];
+                    mem[A+1] <= DI[7:0];
          //           $display("WRITE - A: %0d, Data: %h%h, Size: %b, RW: %b, E: %b", A, DI[15:8], DI[7:0], Size, RW, E);
                 end
                 2'b10: begin 
-                    mem[A] = DI[31:24];
-                    mem[A+1] = DI[23:16];
-                    mem[A+2] = DI[15:8];
-                    mem[A+3] = DI[7:0];
+                    mem[A] <= DI[31:24];
+                    mem[A+1] <= DI[23:16];
+                    mem[A+2] <= DI[15:8];
+                    mem[A+3] <= DI[7:0];
          //           $display("WRITE - A: %0d, Data: %h%h%h%h, Size: %b, RW: %b, E: %b", A, DI[31:24], DI[23:16], DI[15:8], DI[7:0], Size, RW, E);
                 end
             endcase
         end
     end
+
 endmodule
 
 // [ Instruction Memory ]
@@ -1085,7 +1091,7 @@ EX_MEM_Control EX_MEM_C (Clk, Reset, EX_ALU_Size, EX_ALU_RW, EX_ALU_E, EX_LOAD_E
 EX_RF_LE, MEM_ALU_Size, MEM_ALU_RW, MEM_ALU_E, MEM_LOAD_E, MEM_RF_LE);
 
 //MEM Stage Begin
-DataMemory DM (MEM_Data_Address [7:0], MEM_PB, MEM_ALU_Size, MEM_ALU_RW, MEM_ALU_E, MEM_DO);
+DataMemory DM (Clk, MEM_Data_Address [7:0], MEM_PB, MEM_ALU_Size, MEM_ALU_RW, MEM_ALU_E, MEM_DO);
 Mux_2 MEM1 (MEM_PW, MEM_LOAD_E, MEM_Data_Address, MEM_DO);
 //MEM Stage End
 
