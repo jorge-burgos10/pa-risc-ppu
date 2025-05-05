@@ -150,6 +150,7 @@ end
             $fclose(diff_file);
             $display("\n***************************************\n");
             $display("Simulation Finished");
+            $display("\n***************************************\n");
             $finish;
         end
 
