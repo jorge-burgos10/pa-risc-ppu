@@ -72,6 +72,7 @@ endmodule
 
 module Regi_32 (output reg [31:0] o_regi, input [31:0] i_regi, input
 LE, Clk);
+initial begin o_regi = 0; end
 always @ (posedge Clk)
 if (LE) o_regi <= i_regi;
 endmodule
