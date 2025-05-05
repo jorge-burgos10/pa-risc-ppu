@@ -115,6 +115,7 @@ always @(*) begin
 
 endmodule
 
+
 module Target_Address_Generator (input B, input [20:0] Offset, input [31:0] FT, output reg [31:0] Target_Address); 
     reg [31:0] W_SE;
     reg [31:0] W;

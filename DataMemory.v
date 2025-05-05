@@ -11,7 +11,7 @@ module DataMemory (
     reg [7:0] mem [0:255];   // Memoria de 256 bytes
     
     initial begin
-        $readmemb("file_precarga_fase_I.txt", mem); // Precarga de memoria desde archivo
+        $readmemb("SIM_Code/file_precarga_fase_I.txt", mem); // Precarga de memoria desde archivo
         $display("Archivo cargado correctamente");
     end
     
@@ -24,26 +24,22 @@ module DataMemory (
                 default: DO = 32'b0;
             endcase
             $display("READ - A: %0d, DO: %h, Size: %b, RW: %b, E: %b", A, DO, Size, RW, E);
-        end
-    end
-    
-    always @(posedge clk) begin
-        if (RW == 1 && E == 1) begin // Operación de escritura
+        end else if (RW == 1 && E == 1) begin // Operación de escritura
             case (Size)
                 2'b00: begin
-                    mem[A] <= DI[7:0]; 
+                    mem[A] = DI[7:0]; 
                     $display("WRITE - A: %0d, Data: %h, Size: %b, RW: %b, E: %b", A, DI[7:0], Size, RW, E);
                 end
                 2'b01: begin 
-                    mem[A] <= DI[15:8];
-                    mem[A+1] <= DI[7:0];
+                    mem[A] = DI[15:8];
+                    mem[A+1] = DI[7:0];
                     $display("WRITE - A: %0d, Data: %h%h, Size: %b, RW: %b, E: %b", A, DI[15:8], DI[7:0], Size, RW, E);
                 end
                 2'b10: begin 
-                    mem[A] <= DI[31:24];
-                    mem[A+1] <= DI[23:16];
-                    mem[A+2] <= DI[15:8];
-                    mem[A+3] <= DI[7:0];
+                    mem[A] = DI[31:24];
+                    mem[A+1] = DI[23:16];
+                    mem[A+2] = DI[15:8];
+                    mem[A+3] = DI[7:0];
                     $display("WRITE - A: %0d, Data: %h%h%h%h, Size: %b, RW: %b, E: %b", A, DI[31:24], DI[23:16], DI[15:8], DI[7:0], Size, RW, E);
                 end
             endcase
