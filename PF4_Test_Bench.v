@@ -2,6 +2,10 @@ module PPU_Test_Bench;
     reg Clk = 0, Reset = 1;
     reg [8*8:1] keyword;
     wire [3:0] R;
+    integer i, j;
+    reg [7:0] original_mem [0:255];  // copia del archivo original para comparación
+    integer diff_file;
+    integer diffs = 0;
 
     PPU PPU_TB(Clk, Reset);
     PC_track tracker (Clk, PPU_TB.IF_PC, R);
@@ -117,6 +121,34 @@ end
 
         always @ (posedge Clk)
         if (R == 4) begin
+                        $display("\n== Final Data Memory Contents ==\n");
+            for (i = 0; i < 84; i = i + 4) begin
+                $display("%08b %08b %08b %08b", 
+                        PPU_TB.DM.mem[i], 
+                        PPU_TB.DM.mem[i+1], 
+                        PPU_TB.DM.mem[i+2], 
+                        PPU_TB.DM.mem[i+3]);
+            end
+            $display("\n== Cambios detectados en Data Memory ==\n");
+
+
+            diff_file = $fopen("DM_changes.txt", "w");
+
+            for (j = 0; j < 256; j = j + 1) begin
+                if (PPU_TB.DM.mem[j] !== original_mem[j]) begin
+                    $display("Dir: %0d | Original: %08b | Actual: %08b", j, original_mem[j], PPU_TB.DM.mem[j]);
+                    $fdisplay(diff_file, "Dir: %0d | Original: %08b | Actual: %08b", j, original_mem[j], PPU_TB.DM.mem[j]);
+                    diffs = diffs + 1;
+                end
+            end
+
+            if (diffs == 0) begin
+                $display("No se detectaron cambios en la memoria de datos.");
+                $fdisplay(diff_file, "No se detectaron cambios en la memoria de datos.");
+            end
+
+            $fclose(diff_file);
+            $display("\n***************************************\n");
             $display("Simulation Finished");
             $display("\n\n***************************************\n\n");
             $finish;
@@ -650,7 +682,7 @@ module ControlUnit(input [31:0] ID_I,
             end
             6'b100101: begin // SUBI
                 ID_RD_S = 2'b01; ID_Branch_C = 00; ID_SOH_OP = 3'b001;
-                ID_ALU_OP = 4'b0100; ID_PSW_E = 1; ID_ALU_Size = 2'b10;
+                ID_ALU_OP = 4'b0010; ID_PSW_E = 1; ID_ALU_Size = 2'b10;
                 ID_ALU_RW = 0; ID_ALU_E = 0; ID_Branch_U = 0;
                 ID_LOAD_E = 0; ID_RF_LE = 1; ID_Shift_E = 0; ID_SR = 2'b10;
             end
