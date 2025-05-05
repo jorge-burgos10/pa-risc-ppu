@@ -7,7 +7,6 @@ module PPU_Test_Bench;
     integer diff_file;
     integer diffs = 0;
 
-
     PPU PPU_TB(Clk, Reset);
     PC_track tracker (Clk, PPU_TB.IF_PC, R);
 
@@ -132,7 +131,6 @@ end
                         PPU_TB.DM.mem[i+3]);
             end
             $display("\n== Cambios detectados en Data Memory ==\n");
-            
 
             diff_file = $fopen("DM_changes.txt", "w");
 
