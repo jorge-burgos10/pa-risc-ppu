@@ -8,8 +8,6 @@ module ALU(
     output reg [31:0] Out,
     output reg Z, N, C, V
 );
-
-
 always @(*) begin
     case(OP)
         4'b0000: {C, Out} = A + B;      // A + B
@@ -32,26 +30,18 @@ always @(*) begin
     V = ((OP == 4'b0000 || OP == 4'b0001) && (~(A[31] ^ B[31]) & (A[31] ^ Out[31]))) |
         ((OP == 4'b0010 || OP == 4'b0011) && ((A[31] ^ B[31]) & (A[31] ^ Out[31])));
 end
-
-
 endmodule
-
-
 /////////////////////////////////////////////////////////////////////
 //////////////////////////// SOH module//////////////////////////////
 /////////////////////////////////////////////////////////////////////
 
 
 module operandhandler ( output reg [31:0] N,  input [31:0] RB,   input [20:0] I,  input [2:0] S);
-
-
-
-
 always @(*) begin
     case (S)
         3'b000: N = RB;
-        3'b001: N = {{21{I[10]}}, I[10:0]};
-        3'b010: N = {{18{I[13]}}, I[13:0]};
+        3'b001: N = {{21{I[0]}}, I[10:1]};
+        3'b010: N = {{18{I[0]}}, I[13:1]};
         3'b011: N = {I, 11'b0};
         3'b100: N = RB >> (31 - I[9:5]);
         3'b101: N = $signed(RB) >>> (31 - I[9:5]);  
@@ -59,49 +49,21 @@ always @(*) begin
         default: N = 32'b0;
     endcase
 end
-
-
 endmodule
-
-
-/////////////////////////////////////////////////////////////////////
-//////////////////////////// PSW module//////////////////////////////
-/////////////////////////////////////////////////////////////////////
-
-
-// PSW Module
-module PSW (
-    input wire E,          
-    input wire Ci,         
-    output reg cb         
-);
-
-
-    always @ (E or Ci) begin
-        if (E)
-            cb = Ci;
-        else
-            cb = 1'b0;
-    end
-
-
-endmodule
-
 
 module CH (
     input wire N, Z, V, C,        // Flags: Negative, Zero, Overflow, Carry
     input wire [2:0] Cond,        // Condition code
-    input wire B,                 // Enable
+    input wire [1:0] B,                 // Enable
     output reg J                  // Jump condition result
 );
-
-
+reg F;
 always @(*) begin
-    if (B) begin
+    if (B[1]) begin
         case (Cond)
             3'b000: J = 1'b0;                      // Never
             3'b001: J = Z;                         // Equal (Z set)
-            3'b010: J = N ^ V;                     // Less than (signed)
+            3'b010: J = N;                         // Less than (signed)
             3'b011: J = Z | (N ^ V);               // Less or equal (signed)
             3'b100: J = ~C;                        // Less than (unsigned) → no carry = less
             3'b101: J = Z | ~C;                    // Less or equal (unsigned)
@@ -109,12 +71,23 @@ always @(*) begin
             3'b111: J = ~Z & ~V & ~N;              // "Odd" (placeholder logic)
             default: J = 1'b0;
         endcase
+    end else if (B[0]) begin
+        case (Cond)
+            3'b000: F = 1'b0;                      // Never
+            3'b001: F = Z;                         // Equal (Z set)
+            3'b010: F = N;                         // Less than (signed)
+            3'b011: F = Z | (N ^ V);               // Less or equal (signed)
+            3'b100: F = ~C;                        // Less than (unsigned) → no carry = less
+            3'b101: F = Z | ~C;                    // Less or equal (unsigned)
+            3'b110: F = V;                         // Overflow occurred
+            3'b111: F = ~Z & ~V & ~N;              // "Odd" (placeholder logic)
+            default: F = 1'b1;
+        endcase
+        J = ~F;
     end else begin
         J = 1'b0;
     end
 end
-
-
 endmodule
 
 

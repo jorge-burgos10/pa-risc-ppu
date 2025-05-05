@@ -1,11 +1,25 @@
 module PC_Reg #(parameter PC_Set = 0) (input Clk, LE, input [31:0] PC_in, output reg [31:0] PC_out);
     initial begin
         PC_out = PC_Set;
-    end
+    end    
     always @ (posedge Clk)
     if(LE) 
     begin
         PC_out <= PC_in;
+    end
+endmodule
+
+module PC_track (input Clk, input [31:0] PC, output reg [3:0] R);
+reg [31:0] PC_H;
+initial begin PC_H = 0;
+    R = 0;
+end 
+always @ (posedge Clk)
+    if (PC > PC_H) begin
+    PC_H <= PC; 
+    end
+else if (PC == PC_H) begin
+    R<= R+1;
     end
 endmodule
 
@@ -62,15 +76,15 @@ endmodule
 module MEM_WB_Register (input Clk, Reset, MEM_RF_LE, input [31:0] MEM_PW, input [4:0] MEM_RD,
 output reg WB_RF_LE, output reg [31:0] WB_PW, output reg [4:0] WB_RD);
     always @ (posedge Clk)
-    if(!Reset) begin
-        WB_PW <= MEM_PW;
-        WB_RD <= MEM_RD;
-        WB_RF_LE <= MEM_RF_LE;
-    end
-    else begin
+    if(Reset) begin
         WB_PW <= 0;
         WB_RD <= 0;
         WB_RF_LE <= 0;
+    end
+    else begin
+        WB_PW <= MEM_PW;
+        WB_RD <= MEM_RD;
+        WB_RF_LE <= MEM_RF_LE;
     end
 endmodule
 
@@ -112,18 +126,17 @@ always @(*) begin
             NOP = 1'b1;  // Coloca un NOP en EX
         end
     end
-
 endmodule
 
-module Target_Address_Generator (input B, input [20:0] Offset, input [31:0] FT, output reg [31:0] Target_Address); 
+module Target_Address_Generator (input [1:0] B, input [20:0] Offset, input [31:0] FT, output reg [31:0] Target_Address); 
     reg [31:0] W_SE;
     reg [31:0] W;
     always @ (*) begin
-    if (B) begin
-        W_SE = {{20{Offset[12]}}, Offset[12:2], Offset[0]}; // Sign extend
+    if (B[1] || B[0]) begin
+        W_SE = {{19{Offset[12]}}, Offset[12:2], Offset[0]}; // Sign extend
     end
     else begin
-        W_SE = {{15{Offset[20]}}, Offset[20:16], Offset[12:2], Offset[0]}; // Sign extend
+        W_SE = {{11{Offset[20]}}, Offset[20:16], Offset[12:2], Offset[0]}; // Sign extend
     end
         W = W_SE << 2;
         Target_Address = FT + W;
