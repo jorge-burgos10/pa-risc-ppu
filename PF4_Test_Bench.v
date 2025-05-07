@@ -13,7 +13,7 @@ module PPU_Test_Bench;
     always #2 Clk = ~Clk;
 
     initial begin
-        $readmemb("SIM_Code/Validation_PA_risc.txt", original_mem);
+        $readmemb("SIM_Code/Test_2_PA_risc.txt", original_mem);
         $display("\n\n***************************************\n\n");
         #3 Reset = 0;
     end
@@ -91,7 +91,7 @@ always @ (posedge Clk) begin
     PPU_TB.MUX_ALU_OP, PPU_TB.MUX_SOH_OP, PPU_TB.MUX_PSW_E, PPU_TB.MUX_Branch_U, PPU_TB.MUX_Branch_C, PPU_TB.MUX_ALU_Size, PPU_TB.MUX_ALU_RW,
     PPU_TB.MUX_LOAD_E, PPU_TB.MUX_ALU_E, PPU_TB.MUX_RF_LE, PPU_TB.MUX_RD_S, PPU_TB.MUX_Shift_E, PPU_TB.A_S, PPU_TB.B_S);
 
-    $display ("\tEX\t\t |\t NEW_PC = %0d\t Target = %0d\t Cond = %0d\t PA = %0d\t PB = %0d\t Immediate = %b\t RD = %0d\t SOH Out = %0d",
+    $display ("\tEX\t\t |\t NEW_PC = %0d\t Target = %0d\t Cond = %0d\t PA = %0d\t PB = %0d\t Immediate = %b\t RD = %0d\t SOH Out = %b",
     PPU_TB.EX_NEW_PC, PPU_TB.EX_Target, PPU_TB.EX_Cond, PPU_TB.EX_PA, PPU_TB.EX_PB, PPU_TB.EX_Immediate, PPU_TB.EX_RD, PPU_TB.SOH_Out); 
 
     $display ("\tCOND\t |\t Condition = %b\t Branch True = %b\t Branch False = %b\t N = %b\t Z = %0b\t C = %b\t V = %b\t J = %b",
@@ -101,16 +101,16 @@ always @ (posedge Clk) begin
     PPU_TB.EX_ALU_OP, PPU_TB.EX_SOH_OP, PPU_TB.EX_PSW_E, PPU_TB.EX_Branch_U, PPU_TB.EX_Branch_C, PPU_TB.EX_ALU_Size, PPU_TB.EX_ALU_RW, PPU_TB.EX_LOAD_E,
     PPU_TB.EX_ALU_E, PPU_TB.EX_RF_LE, PPU_TB.EX_Shift_E);
 
-    $display ("\tMEM\t\t |\t PB = %0d\t Data Address = %0d\t Data Out = %0d\t RD = %0d",
+    $display ("\tMEM\t\t |\t PB = %0d\t Data Address = %b\t Data Out = %0d\t RD = %0d",
     PPU_TB.MEM_PB, PPU_TB.MEM_Data_Address, PPU_TB.MEM_DO, PPU_TB.MEM_RD); 
 
-    $display ("\tData\t |\t Data In = %0d\t Data Address = %0d\t Data Out = %0d\t RW = %0d\t Size = %d\t Enable = %0d",
+    $display ("\tData\t |\t Data In = %0d\t Data Address = %b\t Data Out = %0d\t RW = %0d\t Size = %d\t Enable = %0d",
     PPU_TB.DM.DI, PPU_TB.DM.A, PPU_TB.DM.DO, PPU_TB.DM.RW, PPU_TB.DM.Size, PPU_TB.DM.E); 
 
     $display("Control MEM\t | \tMEM_Size=%b MEM_RW=%b MEM_E=%b MUX_E=%b RF_LE=%b\n",
     PPU_TB.MEM_ALU_Size, PPU_TB.MEM_ALU_RW, PPU_TB.MEM_ALU_E, PPU_TB.MEM_LOAD_E, PPU_TB.MEM_RF_LE);
 
-    $display ("\tWB\t\t |\t PW = %0d\t RD = %0d",
+    $display ("\tWB\t\t |\t PW = %b\t RD = %0d",
     PPU_TB.WB_PW, PPU_TB.WB_RD);
 
     $display("Control WB\t | \tRF_LE=%b\n",
@@ -121,9 +121,9 @@ end
 //Monitors End
         
         always @ (posedge Clk)
-        if (R == 4) begin
+        if (R == 10) begin
             $display("\n== Final Data Memory Contents ==\n");
-            for (i = 0; i < 84; i = i + 4) begin
+            for (i = 0; i < 256; i = i + 4) begin
                 $display("%08b %08b %08b %08b", 
                         PPU_TB.DM.mem[i], 
                         PPU_TB.DM.mem[i+1], 
@@ -601,7 +601,7 @@ module DataMemory (
     reg [7:0] mem [0:255];   // Memoria de 256 bytes
     
     initial begin
-        $readmemb("SIM_Code/Validation_PA_risc.txt", mem); // Precarga de memoria desde archivo
+        $readmemb("SIM_Code/Test_2_PA_risc.txt", mem); // Precarga de memoria desde archivo
       //  $display("Archivo cargado correctamente");
 
     end
@@ -647,7 +647,7 @@ endmodule
 module InstructionMemory(input [7:0] A, output reg [31:0] I);
     reg [7:0] mem [0:255];
     initial begin
-        $readmemb("SIM_Code/Validation_PA_risc.txt", mem);
+        $readmemb("SIM_Code/Test_2_PA_risc.txt", mem);
        // $display("Instruction memory loaded successfully");
     end
     always @(*) begin
@@ -776,7 +776,7 @@ module ControlUnit(input [31:0] ID_I,
             end 
             6'b001000: begin // LDIL
                 ID_RD_S = 2'b00; ID_Branch_C = 00; ID_SOH_OP = 3'b011;
-                ID_ALU_OP = 4'b1010; ID_PSW_E = 0; ID_ALU_Size = 2'b00;
+                ID_ALU_OP = 4'b1100; ID_PSW_E = 0; ID_ALU_Size = 2'b00;
                 ID_ALU_RW = 0; ID_ALU_E = 0; ID_Branch_U = 0;
                 ID_LOAD_E = 0; ID_RF_LE = 1; ID_Shift_E = 0; ID_SR = 2'b00;
             end   
@@ -820,13 +820,13 @@ module ControlUnit(input [31:0] ID_I,
                 case (ID_I[12:10]) 
                 3'b111: begin // EXTRS
                     ID_RD_S = 2'b01; ID_Branch_C = 00; ID_SOH_OP = 3'b101;
-                    ID_ALU_OP = 4'b1010; ID_PSW_E = 0; ID_ALU_Size = 2'b00;
+                    ID_ALU_OP = 4'b1100; ID_PSW_E = 0; ID_ALU_Size = 2'b00;
                     ID_ALU_RW = 0; ID_ALU_E = 0; ID_Branch_U = 0;
                     ID_LOAD_E = 0; ID_RF_LE = 1; ID_Shift_E = 1; ID_SR = 2'b10;
                 end
                 3'b110: begin // EXTRU
                     ID_RD_S = 2'b01; ID_Branch_C = 00; ID_SOH_OP = 3'b100;
-                    ID_ALU_OP = 4'b1010; ID_PSW_E = 0; ID_ALU_Size = 2'b00;
+                    ID_ALU_OP = 4'b1100; ID_PSW_E = 0; ID_ALU_Size = 2'b00;
                     ID_ALU_RW = 0; ID_ALU_E = 0; ID_Branch_U = 0;
                     ID_LOAD_E = 0; ID_RF_LE = 1; ID_Shift_E = 1; ID_SR = 2'b10;
                 end
@@ -841,7 +841,7 @@ module ControlUnit(input [31:0] ID_I,
                 case (ID_I[12:10]) 
                 3'b010: begin // ZDEP
                     ID_RD_S = 2'b01; ID_Branch_C = 00; ID_SOH_OP = 3'b110;
-                    ID_ALU_OP = 4'b1010; ID_PSW_E = 0; ID_ALU_Size = 2'b00;
+                    ID_ALU_OP = 4'b1100; ID_PSW_E = 0; ID_ALU_Size = 2'b00;
                     ID_ALU_RW = 0; ID_ALU_E = 0; ID_Branch_U = 0;
                     ID_LOAD_E = 0; ID_RF_LE = 1; ID_Shift_E = 1;
                 end
