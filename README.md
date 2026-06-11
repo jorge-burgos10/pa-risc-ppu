@@ -103,10 +103,3 @@ In `PF4_Test_Bench.v`, update the `$readmemb` calls that point to `SIM_Code/Test
 |------|----------|
 | `PF4_Test_Bench.vvp` | Compiled binary (regenerable) |
 | `DM_changes.txt` | Data memory differences after simulation |
-
-## Notes
-
-- The test bench clock has a period of **4 time units** (`always #2 Clk = ~Clk`).
-- Reset is deasserted at **3 ns** of simulation time.
-- Simulation ends when the program counter reaches **10** (`PC_track`).
-- No `.env` file is required: memory paths are defined directly in Verilog via `$readmemb`.
